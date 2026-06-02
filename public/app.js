@@ -46,7 +46,7 @@ async function loadUsers() {
       ? users.map(u => `<tr><td>${u.id}</td><td>${escapeHTML(u.name)}</td><td>${escapeHTML(u.email)}</td><td>${fmt(u.created_at)}</td></tr>`).join('')
       : '<tr><td colspan="4" class="empty">No users yet</td></tr>';
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="4" class="empty">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" class="empty">${escapeHTML(e.message)}</td></tr>`;
   }
 }
 
@@ -80,7 +80,7 @@ async function loadProducts() {
       ? products.map(p => `<tr><td>${p.id}</td><td>${escapeHTML(p.name)}</td><td>${escapeHTML(p.description || '—')}</td><td>$${Number(p.price).toFixed(2)}</td><td>${p.stock}</td><td>${fmt(p.created_at)}</td></tr>`).join('')
       : '<tr><td colspan="6" class="empty">No products yet</td></tr>';
   } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="6" class="empty">${e.message}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">${escapeHTML(e.message)}</td></tr>`;
   }
 }
 

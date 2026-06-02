@@ -14,24 +14,28 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const { name, description, price, stock } = req.body;
-      if (!name || price === undefined) {
+      const parsedPrice = parseFloat(price);
+      if (!name || price === undefined || price === null || isNaN(parsedPrice) || parsedPrice < 0) {
         httpRequestsTotal.inc({ method: 'POST', route: '/api/products', status_code: 400 });
         end();
-        return res.status(400).json({ error: 'name and price are required' });
+        return res.status(400).json({ error: 'name and a valid non-negative price are required' });
       }
       const result = await query(
         'INSERT INTO products (name, description, price, stock) VALUES ($1, $2, $3, $4) RETURNING *',
-        [name, description || '', price, stock || 0]
+        [name, description || '', parsedPrice, stock || 0]
       );
       httpRequestsTotal.inc({ method: 'POST', route: '/api/products', status_code: 201 });
       end();
       return res.status(201).json({ product: result.rows[0] });
     }
 
-    res.status(405).json({ error: 'Method not allowed' });
+    httpRequestsTotal.inc({ method: req.method, route: '/api/products', status_code: 405 });
+    end();
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
+    console.error('[api/products]', err);
     httpRequestsTotal.inc({ method: req.method, route: '/api/products', status_code: 500 });
     end();
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }

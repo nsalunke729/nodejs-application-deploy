@@ -11,7 +11,6 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Prometheus setup
 const register = new client.Registry();
 register.setDefaultLabels({ service: 'product-service' });
 client.collectDefaultMetrics({ register });
@@ -36,42 +35,50 @@ app.get('/metrics', async (_req, res) => {
 
 app.get('/products', async (_req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC');
+    const result = await pool.query('SELECT * FROM products ORDER BY created_at DESC LIMIT 100');
     httpRequests.inc({ method: 'GET', route: '/products', status_code: 200 });
     res.json({ products: result.rows });
   } catch (err) {
+    console.error('[product-service GET /products]', err);
     httpRequests.inc({ method: 'GET', route: '/products', status_code: 500 });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.post('/products', async (req, res) => {
   const { name, description, price, stock } = req.body;
-  if (!name || price === undefined) {
+  const parsedPrice = parseFloat(price);
+  if (!name || price === undefined || price === null || isNaN(parsedPrice) || parsedPrice < 0) {
     httpRequests.inc({ method: 'POST', route: '/products', status_code: 400 });
-    return res.status(400).json({ error: 'name and price are required' });
+    return res.status(400).json({ error: 'name and a valid non-negative price are required' });
   }
   try {
     const result = await pool.query(
       'INSERT INTO products (name, description, price, stock) VALUES ($1, $2, $3, $4) RETURNING *',
-      [name, description || '', price, stock || 0]
+      [name, description || '', parsedPrice, stock || 0]
     );
     httpRequests.inc({ method: 'POST', route: '/products', status_code: 201 });
     res.status(201).json({ product: result.rows[0] });
   } catch (err) {
+    console.error('[product-service POST /products]', err);
     httpRequests.inc({ method: 'POST', route: '/products', status_code: 500 });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.delete('/products/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
+    const result = await pool.query('DELETE FROM products WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      httpRequests.inc({ method: 'DELETE', route: '/products/:id', status_code: 404 });
+      return res.status(404).json({ error: 'Product not found' });
+    }
     httpRequests.inc({ method: 'DELETE', route: '/products/:id', status_code: 200 });
     res.json({ deleted: true });
   } catch (err) {
+    console.error('[product-service DELETE /products/:id]', err);
     httpRequests.inc({ method: 'DELETE', route: '/products/:id', status_code: 500 });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

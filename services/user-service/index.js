@@ -11,7 +11,6 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// Prometheus setup
 const register = new client.Registry();
 register.setDefaultLabels({ service: 'user-service' });
 client.collectDefaultMetrics({ register });
@@ -36,12 +35,13 @@ app.get('/metrics', async (_req, res) => {
 
 app.get('/users', async (_req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC');
+    const result = await pool.query('SELECT * FROM users ORDER BY created_at DESC LIMIT 100');
     httpRequests.inc({ method: 'GET', route: '/users', status_code: 200 });
     res.json({ users: result.rows });
   } catch (err) {
+    console.error('[user-service GET /users]', err);
     httpRequests.inc({ method: 'GET', route: '/users', status_code: 500 });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -59,19 +59,25 @@ app.post('/users', async (req, res) => {
     httpRequests.inc({ method: 'POST', route: '/users', status_code: 201 });
     res.status(201).json({ user: result.rows[0] });
   } catch (err) {
+    console.error('[user-service POST /users]', err);
     httpRequests.inc({ method: 'POST', route: '/users', status_code: 500 });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 app.delete('/users/:id', async (req, res) => {
   try {
-    await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    const result = await pool.query('DELETE FROM users WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      httpRequests.inc({ method: 'DELETE', route: '/users/:id', status_code: 404 });
+      return res.status(404).json({ error: 'User not found' });
+    }
     httpRequests.inc({ method: 'DELETE', route: '/users/:id', status_code: 200 });
     res.json({ deleted: true });
   } catch (err) {
+    console.error('[user-service DELETE /users/:id]', err);
     httpRequests.inc({ method: 'DELETE', route: '/users/:id', status_code: 500 });
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
