@@ -15,6 +15,7 @@ metadata:
 type: Opaque
 stringData:
   POSTGRES_PASSWORD: changeme
+  DATABASE_URL: postgresql://nodeapp:changeme@postgres:5432/nodeapp
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
