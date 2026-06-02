@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command docker -ErrorAction SilentlyContinue)",
+      "PowerShell(docker version 2>&1)",
+      "PowerShell(docker build -t node-app-deploy c:\\\\Users\\\\DELL\\\\source\\\\repos\\\\nsalunke729\\\\node-app-deploy-git-action)"
+    ]
+  }
+}
