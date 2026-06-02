@@ -6,7 +6,7 @@ on:
       - '**'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   peer-review:
@@ -24,6 +24,7 @@ jobs:
             const { owner, repo } = context.repo;
             const before = context.payload.before;
             const after = context.payload.after;
+            const MAX_RISK_FILES_DISPLAYED = 8;
 
             if (!before || /^0+$/.test(before)) {
               core.info('Skipping review comment for initial push without a comparable base commit.');
@@ -44,7 +45,7 @@ jobs:
             const highRiskExtensions = ['.js', '.ts', '.tsx', '.jsx', '.yml', '.yaml', '.json', '.sh', '.Dockerfile'];
             const riskCandidates = files
               .map((file) => file.filename)
-              .filter((filename) => highRiskExtensions.some((ext) => filename.endsWith(ext) || filename.includes(ext)));
+              .filter((filename) => highRiskExtensions.some((ext) => filename.endsWith(ext)));
 
             const topFiles = files.slice(0, 10).map((file) => {
               const status = file.status || 'modified';
@@ -65,15 +66,10 @@ jobs:
               ...(topFiles.length ? topFiles : ['- No file-level diff metadata available.']),
               '',
               riskCandidates.length
-                ? `⚠️ Potentially high-impact files detected: ${riskCandidates.map((name) => `\`${name}\``).slice(0, 8).join(', ')}`
+                ? `⚠️ Potentially high-impact files detected: ${riskCandidates.map((name) => `\`${name}\``).slice(0, MAX_RISK_FILES_DISPLAYED).join(', ')}`
                 : '✅ No high-impact file extensions detected in this push.',
               '',
               'Please complete human peer review before release.',
             ].join('\n');
 
-            await github.rest.repos.createCommitComment({
-              owner,
-              repo,
-              commit_sha: after,
-              body,
-            });
+            await core.summary.addRaw(body).write();
