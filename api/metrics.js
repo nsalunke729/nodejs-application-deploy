@@ -8,6 +8,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', register.contentType);
     res.status(200).send(await register.metrics());
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
