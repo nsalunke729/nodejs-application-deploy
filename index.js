@@ -1,4 +1,5 @@
 import express from 'express';
+import { fileURLToPath } from 'url';
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -40,7 +41,9 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-if (process.env.NODE_ENV !== 'production') {
+const isDirectRun = process.argv[1] === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
