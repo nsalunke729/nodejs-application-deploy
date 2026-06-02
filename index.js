@@ -6,6 +6,11 @@ app.get('/', (req, res) => {
     res.json({ message: 'Hello, from the server!' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+// Vercel runs the export as a serverless handler; listen only in local dev
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT}`);
+    });
+}
+
+export default app;
