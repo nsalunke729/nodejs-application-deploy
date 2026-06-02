@@ -43,7 +43,7 @@ async function loadUsers() {
     const { users } = await fetchJSON('/api/users');
     count.textContent = users.length;
     tbody.innerHTML = users.length
-      ? users.map(u => `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td><td>${fmt(u.created_at)}</td></tr>`).join('')
+      ? users.map(u => `<tr><td>${u.id}</td><td>${escapeHTML(u.name)}</td><td>${escapeHTML(u.email)}</td><td>${fmt(u.created_at)}</td></tr>`).join('')
       : '<tr><td colspan="4" class="empty">No users yet</td></tr>';
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="4" class="empty">${e.message}</td></tr>`;
