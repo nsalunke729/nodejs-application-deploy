@@ -1,0 +1,79 @@
+name: Peer Review Agent
+
+on:
+  push:
+    branches:
+      - '**'
+
+permissions:
+  contents: write
+
+jobs:
+  peer-review:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Generate automated peer review
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const before = context.payload.before;
+            const after = context.payload.after;
+
+            if (!before || /^0+$/.test(before)) {
+              core.info('Skipping review comment for initial push without a comparable base commit.');
+              return;
+            }
+
+            const comparison = await github.rest.repos.compareCommitsWithBasehead({
+              owner,
+              repo,
+              basehead: `${before}...${after}`,
+            });
+
+            const files = comparison.data.files || [];
+            const changedFiles = files.length;
+            const additions = files.reduce((sum, file) => sum + (file.additions || 0), 0);
+            const deletions = files.reduce((sum, file) => sum + (file.deletions || 0), 0);
+
+            const highRiskExtensions = ['.js', '.ts', '.tsx', '.jsx', '.yml', '.yaml', '.json', '.sh', '.Dockerfile'];
+            const riskCandidates = files
+              .map((file) => file.filename)
+              .filter((filename) => highRiskExtensions.some((ext) => filename.endsWith(ext) || filename.includes(ext)));
+
+            const topFiles = files.slice(0, 10).map((file) => {
+              const status = file.status || 'modified';
+              return `- \`${file.filename}\` (${status}, +${file.additions || 0}/-${file.deletions || 0})`;
+            });
+
+            const body = [
+              '## 🤖 Automated Peer Review Agent',
+              '',
+              `A push was detected on branch \`${context.ref.replace('refs/heads/', '')}\`.`,
+              '',
+              `- Commits in push: **${comparison.data.commits?.length || 0}**`,
+              `- Files changed: **${changedFiles}**`,
+              `- Lines added: **${additions}**`,
+              `- Lines deleted: **${deletions}**`,
+              '',
+              '### Files to review',
+              ...(topFiles.length ? topFiles : ['- No file-level diff metadata available.']),
+              '',
+              riskCandidates.length
+                ? `⚠️ Potentially high-impact files detected: ${riskCandidates.map((name) => `\`${name}\``).slice(0, 8).join(', ')}`
+                : '✅ No high-impact file extensions detected in this push.',
+              '',
+              'Please complete human peer review before release.',
+            ].join('\n');
+
+            await github.rest.repos.createCommitComment({
+              owner,
+              repo,
+              commit_sha: after,
+              body,
+            });
