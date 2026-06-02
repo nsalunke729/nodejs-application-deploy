@@ -25,7 +25,8 @@ jobs:
             const before = context.payload.before;
             const after = context.payload.after;
             const MAX_RISK_FILES_DISPLAYED = 8;
-            const HIGH_RISK_EXTENSIONS = ['.js', '.ts', '.tsx', '.jsx', '.yml', '.yaml', '.json', '.sh'];
+            const MAX_TOP_FILES_DISPLAYED = 10;
+            const HIGH_RISK_EXTENSIONS = ['.js', '.ts', '.tsx', '.jsx', '.json', '.sh'];
 
             if (!before || /^0+$/.test(before)) {
               core.info('Skipping review summary for initial push without a comparable base commit.');
@@ -48,12 +49,12 @@ jobs:
               .filter((filename) => {
                 const lowerFilename = filename.toLowerCase();
                 return (
-                  lowerFilename.endsWith('dockerfile') ||
+                  lowerFilename.includes('dockerfile') ||
                   HIGH_RISK_EXTENSIONS.some((ext) => lowerFilename.endsWith(ext))
                 );
               });
 
-            const topFiles = files.slice(0, 10).map((file) => {
+            const topFiles = files.slice(0, MAX_TOP_FILES_DISPLAYED).map((file) => {
               const status = file.status || 'modified';
               return `- \`${file.filename}\` (${status}, +${file.additions || 0}/-${file.deletions || 0})`;
             });
