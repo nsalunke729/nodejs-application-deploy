@@ -26,7 +26,7 @@ jobs:
             const after = context.payload.after;
             const MAX_RISK_FILES_DISPLAYED = 8;
             const MAX_TOP_FILES_DISPLAYED = 10;
-            const HIGH_RISK_EXTENSIONS = ['.js', '.ts', '.tsx', '.jsx', '.json', '.sh'];
+            const HIGH_RISK_EXTENSIONS = ['.js', '.ts', '.tsx', '.jsx', '.sh'];
 
             if (!before || /^0+$/.test(before)) {
               core.info('Skipping review summary for initial push without a comparable base commit.');
@@ -54,10 +54,13 @@ jobs:
                 );
               });
 
-            const topFiles = files.slice(0, MAX_TOP_FILES_DISPLAYED).map((file) => {
+            const topFiles = [...files]
+              .sort((a, b) => ((b.additions || 0) + (b.deletions || 0)) - ((a.additions || 0) + (a.deletions || 0)))
+              .slice(0, MAX_TOP_FILES_DISPLAYED)
+              .map((file) => {
               const status = file.status || 'modified';
               return `- \`${file.filename}\` (${status}, +${file.additions || 0}/-${file.deletions || 0})`;
-            });
+              });
 
             const displayedRiskCandidates = riskCandidates.slice(0, MAX_RISK_FILES_DISPLAYED);
             const remainingRiskCount = riskCandidates.length - displayedRiskCandidates.length;
