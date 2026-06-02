@@ -121,3 +121,7 @@ Required repository secrets:
 
 - `VERCEL_TOKEN`
 
+Depending on your Vercel setup, you may also need:
+
+- `VERCEL_ORG_ID`
+- `VERCEL_PROJECT_ID`
