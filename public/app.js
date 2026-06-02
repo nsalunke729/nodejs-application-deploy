@@ -9,6 +9,16 @@ function fmt(dateStr) {
   return new Date(dateStr).toLocaleString();
 }
 
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
 // --- Health check ---
 async function checkHealth() {
   const badge = document.getElementById('statusBadge');
