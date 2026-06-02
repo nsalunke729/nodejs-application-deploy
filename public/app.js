@@ -77,7 +77,7 @@ async function loadProducts() {
     const { products } = await fetchJSON('/api/products');
     count.textContent = products.length;
     tbody.innerHTML = products.length
-      ? products.map(p => `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.description || '—'}</td><td>$${Number(p.price).toFixed(2)}</td><td>${p.stock}</td><td>${fmt(p.created_at)}</td></tr>`).join('')
+      ? products.map(p => `<tr><td>${p.id}</td><td>${escapeHTML(p.name)}</td><td>${escapeHTML(p.description || '—')}</td><td>$${Number(p.price).toFixed(2)}</td><td>${p.stock}</td><td>${fmt(p.created_at)}</td></tr>`).join('')
       : '<tr><td colspan="6" class="empty">No products yet</td></tr>';
   } catch (e) {
     tbody.innerHTML = `<tr><td colspan="6" class="empty">${e.message}</td></tr>`;
