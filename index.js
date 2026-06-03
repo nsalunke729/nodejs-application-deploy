@@ -1,6 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { register } from './lib/metrics.js';
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -12,6 +13,12 @@ app.get('/', (req, res) => {
 
 app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
+
+// Prometheus metrics — scraped by Docker Compose observability stack
+app.get('/metrics', async (req, res) => {
+    res.setHeader('Content-Type', register.contentType);
+    res.send(await register.metrics());
 });
 
 app.get('/api/users', (req, res) => {
