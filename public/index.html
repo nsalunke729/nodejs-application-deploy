@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Node App Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <h1>Node App Dashboard</h1>
+      <div class="status-badge" id="statusBadge">Checking...</div>
+    </div>
+    <nav>
+      <a href="/api/health" target="_blank">Health</a>
+      <a href="/api/metrics" target="_blank">Metrics</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Users</span>
+        <span class="stat-value" id="userCount">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Products</span>
+        <span class="stat-value" id="productCount">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Service</span>
+        <span class="stat-value" id="serviceUptime">—</span>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Users</h2>
+        <button class="btn" onclick="openModal('userModal')">+ Add User</button>
+      </div>
+      <div class="table-wrap">
+        <table id="usersTable">
+          <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Created</th></tr></thead>
+          <tbody id="usersBody"><tr><td colspan="4" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Products</h2>
+        <button class="btn" onclick="openModal('productModal')">+ Add Product</button>
+      </div>
+      <div class="table-wrap">
+        <table id="productsTable">
+          <thead><tr><th>ID</th><th>Name</th><th>Description</th><th>Price</th><th>Stock</th><th>Created</th></tr></thead>
+          <tbody id="productsBody"><tr><td colspan="6" class="empty">Loading...</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Add User Modal -->
+  <div class="modal-overlay" id="userModal">
+    <div class="modal">
+      <h3>Add User</h3>
+      <form id="userForm">
+        <label>Name<input type="text" name="name" required /></label>
+        <label>Email<input type="email" name="email" required /></label>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('userModal')">Cancel</button>
+          <button type="submit" class="btn">Save</button>
+        </div>
+      </form>
+      <p class="form-error" id="userError"></p>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal">
+      <h3>Add Product</h3>
+      <form id="productForm">
+        <label>Name<input type="text" name="name" required /></label>
+        <label>Description<input type="text" name="description" /></label>
+        <label>Price<input type="number" name="price" step="0.01" min="0" required /></label>
+        <label>Stock<input type="number" name="stock" min="0" value="0" /></label>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" onclick="closeModal('productModal')">Cancel</button>
+          <button type="submit" class="btn">Save</button>
+        </div>
+      </form>
+      <p class="form-error" id="productError"></p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

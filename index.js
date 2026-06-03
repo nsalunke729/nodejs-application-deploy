@@ -1,4 +1,8 @@
 import express from 'express';
+
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { register } from './lib/metrics.js';
 import { track } from '@vercel/analytics/server';
 
 const app = express();
@@ -17,6 +21,14 @@ app.get('/health', (req, res) => {
 
 app.get('/api/users', async (req, res) => {
     await track('Users List Retrieved');
+// Prometheus metrics — scraped by Docker Compose observability stack
+app.get('/metrics', async (req, res) => {
+    res.setHeader('Content-Type', register.contentType);
+    res.send(await register.metrics());
+});
+
+app.get('/api/users', (req, res) => {
+   await track('Users List Retrieved');
     res.json([
         { id: 1, name: 'Alice', role: 'admin' },
         { id: 2, name: 'Bob', role: 'user' },
@@ -52,7 +64,11 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found' });
 });
 
-if (process.env.NODE_ENV !== 'production') {
+const entryFile = process.argv[1] ? path.resolve(process.argv[1]) : '';
+const currentFile = fileURLToPath(import.meta.url);
+const isDirectRun = entryFile === currentFile;
+
+if (isDirectRun) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
