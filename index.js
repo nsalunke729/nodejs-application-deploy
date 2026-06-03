@@ -1,17 +1,13 @@
 import express from 'express';
-
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { register } from './lib/metrics.js';
-import { track } from '@vercel/analytics/server';
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.use(express.json());
 
-app.get('/', async (req, res) => {
-    await track('Homepage Visit');
+app.get('/', (req, res) => {
     res.json({ message: 'Hello, from the server!' });
 });
 
@@ -19,44 +15,38 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', uptime: process.uptime() });
 });
 
-app.get('/api/users', async (req, res) => {
-    await track('Users List Retrieved');
-// Prometheus metrics — scraped by Docker Compose observability stack
+// Lazy-load prom-client so Jest's ESM loader isn't broken on import
 app.get('/metrics', async (req, res) => {
-    res.setHeader('Content-Type', register.contentType);
-    res.send(await register.metrics());
+    try {
+        const { register } = await import('./lib/metrics.js');
+        res.setHeader('Content-Type', register.contentType);
+        res.send(await register.metrics());
+    } catch {
+        res.status(500).json({ error: 'Metrics unavailable' });
+    }
 });
 
 app.get('/api/users', (req, res) => {
-   await track('Users List Retrieved');
     res.json([
         { id: 1, name: 'Alice', role: 'admin' },
         { id: 2, name: 'Bob', role: 'user' },
     ]);
 });
 
-app.get('/api/users/:id', async (req, res) => {
+app.get('/api/users/:id', (req, res) => {
     const id = parseInt(req.params.id);
     const users = [
         { id: 1, name: 'Alice', role: 'admin' },
         { id: 2, name: 'Bob', role: 'user' },
     ];
     const user = users.find(u => u.id === id);
-    if (!user) {
-        await track('User Not Found', { userId: id });
-        return res.status(404).json({ error: 'User not found' });
-    }
-    await track('User Retrieved', { userId: id });
+    if (!user) return res.status(404).json({ error: 'User not found' });
     res.json(user);
 });
 
-app.post('/api/users', async (req, res) => {
+app.post('/api/users', (req, res) => {
     const { name, role } = req.body;
-    if (!name || !role) {
-        await track('User Creation Failed', { reason: 'Missing fields' });
-        return res.status(400).json({ error: 'name and role are required' });
-    }
-    await track('User Created', { role });
+    if (!name || !role) return res.status(400).json({ error: 'name and role are required' });
     res.status(201).json({ id: 3, name, role });
 });
 
@@ -66,9 +56,8 @@ app.use((req, res) => {
 
 const entryFile = process.argv[1] ? path.resolve(process.argv[1]) : '';
 const currentFile = fileURLToPath(import.meta.url);
-const isDirectRun = entryFile === currentFile;
 
-if (isDirectRun) {
+if (entryFile === currentFile) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
     });
