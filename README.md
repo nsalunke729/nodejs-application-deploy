@@ -1,37 +1,107 @@
-# Node.js Application Deploy
+# Node.js Fullstack Microservice App
 
-A simple Express.js API application with test coverage and deployment-ready configuration for Docker and Vercel.
+A fullstack microservice Node.js application deployed on **Vercel** with a **GitHub Actions CI/CD pipeline**. Demonstrates a production-grade architecture including REST APIs, PostgreSQL, Redis, Docker, Kubernetes, and Prometheus + Grafana observability — all in a single monorepo.
 
-## Features
+---
 
-- REST API built with Express 5
-- Health check endpoint
-- User list and user creation endpoints
-- Jest + Supertest test suite
-- ESLint configuration
-- Docker and Docker Compose support
-- GitHub Actions workflows for linting, testing, security checks, and deployment
+## Architecture
+
+```
+GitHub (push to master)
+        ↓
+GitHub Actions → npm ci → vercel build → vercel deploy --prod
+        ↓
+Vercel (Serverless)
+        ↓
+┌──────────────────────────────────┐
+│  public/index.html  (Dashboard)  │  ← Static UI
+├──────────────────────────────────┤
+│  api/users.js                    │  ← Serverless functions
+│  api/products.js                 │
+│  api/health.js                   │
+│  api/metrics.js                  │
+└────────────────┬─────────────────┘
+                 │
+         Neon PostgreSQL (cloud)
+```
+
+---
 
 ## Tech Stack
 
-- Node.js
-- Express
-- Jest
-- Supertest
-- ESLint
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Node.js 22, ESM (`"type": "module"`) |
+| Framework | Express 5 |
+| Database | PostgreSQL (Neon cloud) via `pg` |
+| Caching | Redis via `ioredis` |
+| Metrics | `prom-client` (Prometheus format) |
+| Frontend | Vanilla HTML/CSS/JS (dark-theme dashboard) |
+| Testing | Jest + Supertest (8 tests) |
+| Containers | Docker + Docker Compose (7 services) |
+| Orchestration | Kubernetes manifests (deployments, ingress, StatefulSet) |
+| Observability | Prometheus + Grafana (local Docker stack) |
+| Deployment | Vercel (serverless) |
+| CI/CD | GitHub Actions |
+
+---
 
 ## Project Structure
 
-```text
-.
-├── index.js
-├── tests/
-│   └── app.test.js
-├── Dockerfile
-├── docker-compose.yml
-├── vercel.json
-└── .github/workflows/
 ```
+├── index.js                        # Express API gateway (local dev)
+├── vercel.json                     # Vercel routing rules
+├── package.json
+├── Dockerfile
+├── docker-compose.yml              # Full local stack (7 services)
+│
+├── api/                            # Vercel serverless functions
+│   ├── users.js
+│   ├── products.js
+│   ├── health.js
+│   └── metrics.js
+│
+├── lib/
+│   ├── db.js                       # PostgreSQL pool (singleton, max:2 for serverless)
+│   └── metrics.js                  # Prometheus registry + counters/histograms
+│
+├── public/                         # Static frontend (served by Vercel)
+│   ├── index.html                  # Dashboard UI
+│   ├── styles.css
+│   └── app.js
+│
+├── db/
+│   ├── schema.sql                  # users + products tables
+│   ├── seed.sql                    # Sample data
+│   └── init.js                     # Node.js DB initializer (no psql CLI needed)
+│
+├── services/
+│   ├── user-service/               # Standalone microservice (port 3001)
+│   └── product-service/            # Standalone microservice (port 3002)
+│
+├── k8s/                            # Kubernetes manifests
+│   ├── namespace.yaml
+│   ├── postgres.yaml               # StatefulSet + schema ConfigMap
+│   ├── redis.yaml
+│   ├── user-service.yaml
+│   ├── product-service.yaml
+│   ├── ingress.yaml                # nginx Ingress (Prefix pathType)
+│   └── prometheus.yaml
+│
+├── observability/
+│   ├── prometheus.yml              # Scrape config (api-gateway, user-service, product-service)
+│   └── grafana/
+│       ├── provisioning/           # Auto-provisions Prometheus datasource
+│       └── dashboards/             # app-dashboard.json (HTTP reqs, p99 latency, memory)
+│
+├── tests/
+│   └── app.test.js                 # 8 Jest tests (all passing)
+│
+└── .github/
+    └── workflows/deploy.yml        # CI/CD: test → build → deploy to Vercel
+```
+
+---
 
 ## Getting Started
 
@@ -39,89 +109,153 @@ A simple Express.js API application with test coverage and deployment-ready conf
 
 - Node.js 22+
 - npm
+- Docker Desktop (for local observability stack)
 
-### Install Dependencies
+### Install dependencies
 
 ```bash
 npm ci
 ```
 
-### Run Locally
+### Set up environment variables
+
+Copy `.env.example` to `.env` and fill in your values:
 
 ```bash
-npm start
+cp .env.example .env
 ```
 
-The app runs on `http://localhost:8080` by default.
+Required variables:
+
+```
+DATABASE_URL=postgresql://...        # Neon connection string
+POSTGRES_DB=mydb
+POSTGRES_USER=myuser
+POSTGRES_PASSWORD=secret
+REDIS_URL=redis://localhost:6379
+GF_SECURITY_ADMIN_USER=admin
+GF_SECURITY_ADMIN_PASSWORD=admin
+```
+
+### Initialize the database
+
+```bash
+npm run db:init        # create tables
+npm run db:seed        # (optional) insert sample data
+```
+
+### Run locally
+
+```bash
+npm start              # http://localhost:8080
+npm run dev            # with --watch (auto-reload)
+```
+
+---
 
 ## API Endpoints
 
-### `GET /`
-Returns:
+### Gateway / Local
 
-```json
-{ "message": "Hello, from the server!" }
-```
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/` | Hello message |
+| GET | `/health` | Service health + uptime |
+| GET | `/metrics` | Prometheus metrics |
+| GET | `/api/users` | List users |
+| GET | `/api/users/:id` | Get user by ID |
+| POST | `/api/users` | Create user `{ name, role }` |
 
-### `GET /health`
-Returns:
+### Vercel Serverless (`api/`)
 
-```json
-{ "status": "ok", "uptime": 123.45 }
-```
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET/POST | `/api/users` | Users CRUD (PostgreSQL) |
+| GET/POST | `/api/products` | Products CRUD (PostgreSQL) |
+| GET | `/api/health` | Health check |
+| GET | `/api/metrics` | Prometheus metrics |
 
-### `GET /api/users`
-Returns a list of users.
-
-### `GET /api/users/:id`
-- `200` with user when found
-- `404` when user is not found
-
-### `POST /api/users`
-Request body:
-
-```json
-{ "name": "Charlie", "role": "user" }
-```
-
-- `201` when valid
-- `400` when `name` or `role` is missing
+---
 
 ## Testing
-
-Run tests with:
 
 ```bash
 npm test
 ```
 
-## Linting
+8 tests covering all Express routes (GET /, GET /health, GET /api/users, GET /api/users/:id, POST /api/users, unknown routes).
 
-Run lint checks with:
+---
 
-```bash
-npx eslint . --ext .js,.ts
-```
+## Docker (Local Stack)
 
-## Docker
-
-### Build and Run with Docker Compose
+Runs all 7 services: PostgreSQL, Redis, user-service, product-service, api-gateway, Prometheus, Grafana.
 
 ```bash
-docker compose up --build
+docker-compose up -d
 ```
 
-The app will be available at `http://localhost:8080`.
+| Service | URL |
+|---------|-----|
+| API Gateway | http://localhost:8081 |
+| User Service | http://localhost:3001 |
+| Product Service | http://localhost:3002 |
+| Prometheus | http://localhost:9090 |
+| Grafana | http://localhost:3000 |
+
+Grafana login uses `GF_SECURITY_ADMIN_USER` / `GF_SECURITY_ADMIN_PASSWORD` from `.env`.
+
+---
+
+## Observability
+
+Prometheus scrapes `/metrics` from all three services every 15s. Grafana auto-provisions the Prometheus datasource and loads `app-dashboard.json` which includes:
+
+- HTTP requests/sec per service
+- p99 request latency
+- RSS memory usage
+
+To view: start the Docker stack and open **http://localhost:3000 → Dashboards → Node App Dashboard**.
+
+---
+
+## Kubernetes
+
+Apply all manifests to a running cluster:
+
+```bash
+kubectl apply -f k8s/
+```
+
+Includes: namespace, PostgreSQL StatefulSet (with schema auto-init), Redis, user-service and product-service Deployments, nginx Ingress, Prometheus.
+
+---
 
 ## Deployment
 
-This repository includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that deploys to Vercel on pushes to the `master` branch.
+Pushes to `master` automatically deploy to Vercel via GitHub Actions.
 
-Required repository secrets:
+### Required GitHub Secrets
 
-- `VERCEL_TOKEN`
+| Secret | Description |
+|--------|-------------|
+| `VERCEL_TOKEN` | Vercel API token |
+| `VERCEL_ORG_ID` | Vercel organization ID |
+| `VERCEL_PROJECT_ID` | Vercel project ID |
 
-Depending on your Vercel setup, you may also need:
+### Required Vercel Environment Variables
 
-- `VERCEL_ORG_ID`
-- `VERCEL_PROJECT_ID`
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Neon PostgreSQL connection string |
+
+### What vs where
+
+| Feature | Vercel | Local Docker | Kubernetes |
+|---------|:------:|:------------:|:----------:|
+| Dashboard UI | ✅ | ✅ | ✅ |
+| REST API | ✅ | ✅ | ✅ |
+| PostgreSQL | ✅ Neon | ✅ | ✅ StatefulSet |
+| Redis | — | ✅ | ✅ |
+| Prometheus | — | ✅ | ✅ |
+| Grafana | — | ✅ | ✅ |
