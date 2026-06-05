@@ -5,9 +5,16 @@ import Marketplace from './pages/Marketplace'
 import CartPage from './pages/CartPage'
 import OrdersPage from './pages/OrdersPage'
 import AdminPage from './pages/AdminPage'
-import { inject } from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics/react';
 
-inject();
+function App() {
+  return (
+    <>
+      {/* your existing JSX */}
+      <Analytics />
+    </>
+  );
+}
 
 export default function App() {
   return (
