@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import ProductCard from '../components/ProductCard'
+import { Analytics } from "@vercel/analytics/next"
 
 export default function Marketplace() {
   const [products, setProducts] = useState([])
