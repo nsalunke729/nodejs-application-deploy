@@ -8,7 +8,7 @@
     "start": "node index.js",
     "dev": "node --watch index.js",
     "dev:frontend": "cd frontend && npm run dev",
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install --include=dev&& npm run build",
     "db:init": "node db/init.js",
     "db:seed": "node db/init.js --seed",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
