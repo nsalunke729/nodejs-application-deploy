@@ -7,18 +7,9 @@ import OrdersPage from './pages/OrdersPage'
 import AdminPage from './pages/AdminPage'
 import { Analytics } from '@vercel/analytics/react';
 
-function App() {
-  return (
-    <>
-      {/* your existing JSX */}
-      <Analytics />
-    </>
-  );
-}
-
 export default function App() {
   return (
-    <BrowserRouter>
+    <><BrowserRouter>
       <CartProvider>
         <div className="min-h-screen bg-gray-50">
           <Navbar />
@@ -32,6 +23,6 @@ export default function App() {
           </main>
         </div>
       </CartProvider>
-    </BrowserRouter>
+    </BrowserRouter><Analytics /></>
   )
 }
